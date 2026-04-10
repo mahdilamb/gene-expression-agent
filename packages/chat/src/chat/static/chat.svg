@@ -1,0 +1,29 @@
+<svg viewBox="8 0 128 72" width="102" height="54" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle">
+  <!-- "chat" wordmark — h matches c/a/t style, g descender is subdued -->
+
+  <!-- c — open arc -->
+  <path d="M12 28c-2-8 2-14 8-14s8 4 8 4" stroke="#333" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+  <path d="M12 28c-2 8 2 14 8 14s8-4 8-4" stroke="#333" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+
+  <!-- h — same #333 style as c/a/t -->
+  <!-- h stem -->
+  <path d="M42 2v38" stroke="#333" stroke-width="2.8" stroke-linecap="round"/>
+  <!-- h shoulder -->
+  <path d="M42 16c0-9 22-9 22 0" stroke="#333" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+  <!-- h right leg -->
+  <path d="M64 16v24" stroke="#333" stroke-width="2.8" stroke-linecap="round"/>
+
+  <!-- g — subdued descender, completing the double-story g form -->
+  <!-- upper bowl bottom curve -->
+  <path d="M42 40c0 2 4 4 11 4s11-2 11-4" stroke="#333" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.2"/>
+  <!-- descender loop -->
+  <path d="M64 40v6c0 8-4 14-12 16s-14-1-14-8c0-5 4-8 10-8h16" stroke="#333" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.2"/>
+
+  <!-- a — bowl + stem -->
+  <path d="M88 38c-2 2-6 4-8 4s-6-2-6-8c0-8 6-12 14-12" stroke="#333" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+  <path d="M88 22v20" stroke="#333" stroke-width="2.8" stroke-linecap="round"/>
+
+  <!-- t — crossbar + stem -->
+  <path d="M102 10v28c0 3 2 4 5 4" stroke="#333" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+  <path d="M97 22h12" stroke="#333" stroke-width="2.8" stroke-linecap="round"/>
+</svg>
