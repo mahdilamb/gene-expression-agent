@@ -1,0 +1,14 @@
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+ARG PACKAGE=chat
+ENV UV_NO_DEV=1
+WORKDIR /app
+
+COPY uv.lock pyproject.toml /app/
+
+RUN uv sync --frozen --no-install-project --package ${PACKAGE}
+
+COPY ./packages/${PACKAGE} /app/packages/${PACKAGE}
+
+RUN uv sync --frozen --package ${PACKAGE}
+
+ENTRYPOINT [ "uv", "run", "--no-sync" ]
