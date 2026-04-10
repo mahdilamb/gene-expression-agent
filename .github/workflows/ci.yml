@@ -1,0 +1,130 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "packages/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "packages/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
+  workflow_dispatch:
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      main: ${{ steps.filter.outputs.main }}
+      agent: ${{ steps.filter.outputs.agent }}
+      chat: ${{ steps.filter.outputs.chat }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            main:
+              - "src/**"
+              - "tests/**"
+              - "pyproject.toml"
+              - "uv.lock"
+            agent:
+              - "packages/agent/**"
+              - "pyproject.toml"
+              - "uv.lock"
+            chat:
+              - "packages/chat/**"
+              - "pyproject.toml"
+              - "uv.lock"
+
+  conventional-commits:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: webiny/action-conventional-commits@v1.3.0
+
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync --dev --all-packages
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+
+  ty-main:
+    needs: changes
+    if: needs.changes.outputs.main == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync --dev --all-packages
+      - run: uv run ty check src/
+
+  ty-agent:
+    needs: changes
+    if: needs.changes.outputs.agent == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync --dev --all-packages
+      - run: uv run ty check packages/agent/
+
+  ty-chat:
+    needs: changes
+    if: needs.changes.outputs.chat == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync --dev --all-packages
+      - run: uv run ty check packages/chat/
+
+  pytest:
+    needs: changes
+    if: needs.changes.outputs.main == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync --dev --all-packages
+      - run: uv run pytest -m "not requires_api_key"
+
+  agent-eval:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync --dev --all-packages
+      - run: uv run pytest tests/test_agent_responses.py -v
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

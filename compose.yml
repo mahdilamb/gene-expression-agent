@@ -1,0 +1,88 @@
+services:
+  mcp-server:
+    restart: unless-stopped
+    build:
+      context: .
+    ports:
+      - "8080:8080"
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./src
+          target: /app/src
+    volumes:
+      - ./data:/app/data:ro
+  agent:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile.package
+      args:
+        - PACKAGE=agent
+    ports:
+      - "8000:8000"
+    environment:
+      - MCP_SERVER_URL=http://mcp-server:8080
+      - REDIS_URL=redis://redis:6379
+    env_file:
+      - ./.env.agent
+    depends_on:
+      mcp-server:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    command: ["agent"]
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./packages/agent
+          target: /app/packages/agent
+  redis:
+    restart: unless-stopped
+    image: redis:7-alpine
+    expose:
+      - "6379"
+    volumes:
+      - redis-data:/data
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+  chat:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile.package
+      args:
+        - PACKAGE=chat
+    command: ["chat"]
+    ports:
+      - "8501:8501"
+    environment:
+      - AGENT_URL=http://agent:8000
+    env_file:
+      - ./.env.chat
+    depends_on:
+      agent:
+        condition: service_healthy
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./packages/chat
+          target: /app/packages/chat
+
+volumes:
+  redis-data:
