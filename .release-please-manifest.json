@@ -1,5 +1,5 @@
 {
-  ".": "0.1.0",
-  "packages/agent": "0.1.0",
-  "packages/chat": "0.1.0"
+  ".": "0.1.1",
+  "packages/agent": "0.1.1",
+  "packages/chat": "0.1.1"
 }
