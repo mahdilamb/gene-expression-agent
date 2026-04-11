@@ -26,19 +26,6 @@
           "jsonpath": "$.package[?(@.name=='agent')].version"
         }
       ]
-    },
-    "packages/chat": {
-      "release-type": "python",
-      "package-name": "chat",
-      "bump-minor-pre-major": true,
-      "bump-patch-for-minor-pre-major": true,
-      "extra-files": [
-        {
-          "type": "toml",
-          "path": "uv.lock",
-          "jsonpath": "$.package[?(@.name=='chat')].version"
-        }
-      ]
     }
   }
 }

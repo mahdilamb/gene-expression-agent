@@ -61,28 +61,22 @@ services:
     volumes:
       - redis-data:/data
     command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
-  chat:
+  ui:
     restart: unless-stopped
     build:
-      context: .
-      dockerfile: Dockerfile.package
-      args:
-        - PACKAGE=chat
-    command: ["chat"]
+      context: ./ui
     ports:
       - "8501:8501"
     environment:
       - AGENT_URL=http://agent:8000
-    env_file:
-      - ./.env.chat
     depends_on:
       agent:
         condition: service_healthy
     develop:
       watch:
-        - action: sync+restart
-          path: ./packages/chat
-          target: /app/packages/chat
+        - action: rebuild
+          path: ./ui/src
+          target: /app/src
 
 volumes:
   redis-data:

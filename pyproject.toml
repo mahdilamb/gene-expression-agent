@@ -27,7 +27,6 @@ build-backend = "hatchling.build"
 members = ["packages/*"]
 
 [tool.uv.sources]
-chat = { workspace = true }
 agent = { workspace = true }
 
 [tool.ruff]
@@ -48,7 +47,7 @@ select = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["mcp_server", "agent", "chat"]
+known-first-party = ["mcp_server", "agent"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "packages/*/tests"]

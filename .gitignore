@@ -8,8 +8,13 @@ wheels/
 
 /.vscode
 
+# Node
+node_modules/
+ui/.vite/
+
 # Virtual environments
 .venv
 *.env
 *.env.*
 !/.env.chat
+/.claude

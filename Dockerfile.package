@@ -1,5 +1,5 @@
 FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
-ARG PACKAGE=chat
+ARG PACKAGE=agent
 ENV UV_NO_DEV=1
 WORKDIR /app
 

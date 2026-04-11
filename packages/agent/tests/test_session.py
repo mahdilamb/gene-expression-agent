@@ -3,7 +3,16 @@ import json
 import pytest
 from redis.asyncio import Redis
 
-from agent.session import SESSION_KEY, load_messages, redis_ok, save_messages
+from agent.session import (
+    DISPLAY_KEY,
+    SESSION_KEY,
+    load_display_messages,
+    load_messages,
+    redis_ok,
+    save_display_messages,
+    save_messages,
+)
+from agent.types import DisplayMessage
 
 
 async def test_load_messages_returns_empty_list_for_new_session(
@@ -100,3 +109,58 @@ def test_key_format():
     assert SESSION_KEY.format(session_id="abc-123") == "agent:session:abc-123", (
         "Expected key to follow agent:session:{session_id} format"
     )
+
+
+# ── DisplayMessage tests ──────────────────────────────────────────────────────
+
+
+def test_display_message_auto_generates_id():
+    msg = DisplayMessage(role="user", content="hello")
+    assert msg.id, "Expected id to be auto-generated"
+
+
+def test_display_message_ids_are_unique():
+    a = DisplayMessage(role="user", content="x")
+    b = DisplayMessage(role="user", content="x")
+    assert a.id != b.id, "Expected each DisplayMessage to get a unique id"
+
+
+def test_display_message_explicit_id():
+    msg = DisplayMessage(id="fixed-id", role="assistant", content="hi")
+    assert msg.id == "fixed-id"
+
+
+async def test_load_display_messages_returns_empty_list(fake_redis: Redis):
+    result = await load_display_messages("new-session")
+    assert result == [], "Expected empty list for a new session"
+
+
+async def test_save_and_load_display_messages_roundtrip(fake_redis: Redis):
+    messages = [
+        DisplayMessage(id="id-1", role="user", content="hello"),
+        DisplayMessage(id="id-2", role="assistant", content="hi there"),
+    ]
+    await save_display_messages("s1", messages)
+    result = await load_display_messages("s1")
+
+    assert len(result) == 2
+    assert result[0].id == "id-1"
+    assert result[0].role == "user"
+    assert result[0].content == "hello"
+    assert result[1].id == "id-2"
+    assert result[1].role == "assistant"
+
+
+async def test_load_display_messages_hydrates_ids(fake_redis: Redis):
+    """Old messages without an id field get a new uuid assigned on load."""
+    raw = [{"role": "user", "content": "old message"}]
+    await fake_redis.set(DISPLAY_KEY.format(session_id="s1"), json.dumps(raw))
+
+    result = await load_display_messages("s1")
+    assert len(result) == 1
+    assert result[0].id, "Expected id to be generated for legacy message"
+    assert result[0].role == "user"
+
+
+def test_display_key_format():
+    assert DISPLAY_KEY.format(session_id="abc-123") == "agent:session:abc-123:display"

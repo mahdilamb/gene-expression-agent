@@ -8,8 +8,8 @@ Ask questions like "What genes are involved in lung cancer?" or "Plot the median
 
 ```mermaid
 graph LR
-    Browser --> Chat[Chat<br/>Streamlit]
-    Chat --> Agent[Agent<br/>FastAPI]
+    Browser --> UI[UI<br/>React + Vite]
+    UI --> Agent[Agent<br/>FastAPI]
     Agent --> MCP[MCP Server<br/>FastMCP]
     Agent --> Redis[(Redis)]
     MCP --> Data[(CSV data)]
@@ -19,7 +19,7 @@ graph LR
 | -------------- | ---- | ------------------------------------------------ |
 | **mcp-server** | 8080 | Exposes gene expression data as MCP tools        |
 | **agent**      | 8000 | Orchestrates Claude API calls and tool execution |
-| **chat**       | 8501 | Streamlit frontend with streaming responses      |
+| **ui**         | 8501 | React frontend with streaming responses          |
 | **redis**      | 6379 | Session persistence and data caching             |
 
 ## Quick start
@@ -65,19 +65,19 @@ docker compose watch
 .
 ├── src/mcp_server/          MCP server (gene expression tools)
 ├── packages/
-│   ├── agent/               Claude agent (FastAPI + session management)
-│   └── chat/                Streamlit frontend (widgets, sessions)
+│   └── agent/               Claude agent (FastAPI + session management)
+├── ui/                      React frontend (Vite, TypeScript, Plotly)
 ├── data/                    Gene expression CSV dataset
-├── tests/                   Root-level tests (dataset, widget compat, agent eval)
+├── tests/                   Root-level tests (dataset, agent eval)
 ├── compose.yml              Docker Compose orchestration
 ├── Dockerfile               MCP server image
-└── Dockerfile.package       Reusable image for agent/chat packages
+└── Dockerfile.package       Agent package image
 ```
 
 See individual package READMEs for more detail:
 
 - [packages/agent/README.md](packages/agent/README.md)
-- [packages/chat/README.md](packages/chat/README.md)
+- [ui/README.md](ui/README.md)
 
 ## Testing
 
@@ -96,6 +96,12 @@ ANTHROPIC_API_KEY=sk-ant-... uv run pytest tests/test_agent_responses.py -v
 
 These can also be triggered via GitHub Actions **workflow_dispatch**.
 
+Run UI tests:
+
+```bash
+cd ui && yarn test
+```
+
 ## Environment variables
 
 | Variable            | Required | Default                    | Description                         |
@@ -104,7 +110,7 @@ These can also be triggered via GitHub Actions **workflow_dispatch**.
 | `ANTHROPIC_MODEL`   | No       | `claude-sonnet-4-20250514` | Claude model to use                 |
 | `MCP_SERVER_URL`    | No       | `http://localhost:8080`    | MCP server URL                      |
 | `REDIS_URL`         | No       | `redis://localhost:6379`   | Redis connection URL                |
-| `AGENT_URL`         | No       | `http://localhost:8000`    | Agent API URL (for chat frontend)   |
+| `AGENT_URL`         | No       | `http://localhost:8000`    | Agent API URL (for the UI)          |
 
 ## CI
 
@@ -113,4 +119,5 @@ GitHub Actions runs on push/PR to `main`:
 - **ruff** - lint and format check
 - **ty** - type checking (per package, only on changed paths)
 - **pytest** - unit and integration tests (excludes agent eval)
+- **ui-typecheck** - TypeScript type checking for the React UI
 - **agent-eval** - manual dispatch only, runs Claude-based tests with API key from secrets
