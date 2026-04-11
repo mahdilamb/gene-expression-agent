@@ -1,28 +1,26 @@
 import json
 
-import polars as pl
+import pandas as pd
 
 from mcp_server.constants import DATA_DIR
 
-df = pl.read_csv(DATA_DIR / "owkin_take_home_data (1).csv")
+df = pd.read_csv(DATA_DIR / "owkin_take_home_data (1).csv")
 
 
 def get_targets(cancer_name: str) -> list[str]:
     """Return a list of genes for a given cancer type."""
-    return df.filter(pl.col("cancer_indication") == cancer_name)["gene"].to_list()
+    return df[df["cancer_indication"] == cancer_name]["gene"].tolist()
 
 
 def get_expressions(genes: list[str]) -> dict[str, float]:
     """Return the median values for the given list of genes."""
-    subset = df.filter(pl.col("gene").is_in(genes))
-    genes_list = subset["gene"].to_list()
-    values_list = subset["median_value"].to_list()
-    return dict(zip(genes_list, values_list, strict=True))
+    subset = df[df["gene"].isin(genes)]
+    return dict(zip(subset["gene"], subset["median_value"], strict=True))
 
 
 def list_cancer_types() -> list[str]:
     """Return all cancer types available in the dataset."""
-    return df["cancer_indication"].unique().to_list()
+    return df["cancer_indication"].unique().tolist()
 
 
 def plot_medians(genes: list[str], values: list[float]) -> str:
@@ -40,4 +38,4 @@ def plot_medians(genes: list[str], values: list[float]) -> str:
 
 
 def as_csv_string() -> str:
-    return df.write_csv()
+    return df.to_csv(index=False)
