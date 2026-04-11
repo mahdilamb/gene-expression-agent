@@ -115,6 +115,29 @@ jobs:
       - working-directory: ui
         run: yarn typecheck
 
+  ui-test:
+    needs: changes
+    if: needs.changes.outputs.ui == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: ui/yarn.lock
+      - run: uv sync --dev --all-packages
+      - run: uv run python ui/scripts/export_openapi.py
+      - working-directory: ui
+        run: yarn install --frozen-lockfile
+      - working-directory: ui
+        run: yarn openapi-ts
+      - working-directory: ui
+        run: yarn test
+
   pytest:
     needs: changes
     if: needs.changes.outputs.main == 'true'
