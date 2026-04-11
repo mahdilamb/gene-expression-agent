@@ -6,11 +6,10 @@ on:
 
 jobs:
   conventional-commits:
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ !startsWith(github.head_ref, 'release-please--') }}
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - if: ${{ !startsWith(github.head_ref, 'release-please--') }}
-        uses: webiny/action-conventional-commits@v1.3.0
+      - uses: webiny/action-conventional-commits@v1.3.0
