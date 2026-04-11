@@ -290,17 +290,17 @@ async def ask(request: AskRequest, session: MCPSession, tools: ToolsReady):
             {
                 "role": "user",
                 "content": (
-                    f"The user wants to ask about something in the conversation.\n"
+                    f"Side-thread query.\n"
                     f"Context: {request.context}\n\n"
-                    "Give concise, helpful answers. Do not use tool markers like "
-                    "<!--CHART:--> or <!--TABLE:-->."
+                    "Respond concisely using scientific terminology. "
+                    "Do not use tool markers like <!--CHART:--> or <!--TABLE:-->."
                 ),
             }
         )
         thread_messages.append(
             {
                 "role": "assistant",
-                "content": "Sure, I can help you with that. What would you like to know?",
+                "content": "Understood. What is your question?",
             }
         )
 
