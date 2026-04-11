@@ -7,6 +7,13 @@ from mcp.types import TextContent
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
+    from anthropic.types import (
+        ContentBlock as AnthropicContentBlock,
+    )
+    from anthropic.types import (
+        TextBlock,
+        ToolUseBlock,
+    )
     from mcp.types import ContentBlock
 
 type Status = Literal["ok", "not ok"]
@@ -34,6 +41,13 @@ class ChatRequest(BaseModel):
     message: str
 
 
+class AskRequest(BaseModel):
+    session_id: str
+    thread_id: str
+    question: str
+    context: str
+
+
 class ErrorResponse(BaseModel):
     error: str
     status_code: int
@@ -42,3 +56,17 @@ class ErrorResponse(BaseModel):
 def is_text_content(content: ContentBlock) -> TypeGuard[TextContent]:
     """Check if a content block is a TextContent."""
     return isinstance(content, TextContent)
+
+
+def is_text_block(
+    block: AnthropicContentBlock,
+) -> TypeGuard[TextBlock]:
+    """Check if an Anthropic content block is a TextBlock."""
+    return block.type == "text"
+
+
+def is_tool_use_block(
+    block: AnthropicContentBlock,
+) -> TypeGuard[ToolUseBlock]:
+    """Check if an Anthropic content block is a ToolUseBlock."""
+    return block.type == "tool_use"

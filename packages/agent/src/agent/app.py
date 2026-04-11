@@ -1,10 +1,11 @@
 import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import Annotated, Any
 
 import anthropic
 from anthropic import DefaultAioHttpClient
+from anthropic.types.tool_param import ToolParam
 from fastapi import Depends, FastAPI, Request, Response
 from fastapi.exceptions import HTTPException, RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,27 +17,27 @@ from agent.constants import MODEL
 from agent.errors import ToolsNotReadyError
 from agent.mcp_tools import fetch_tools, mcp_session, poll_tools, tools_ready
 from agent.session import (
+    get_parent,
+    list_children,
     load_display_messages,
     load_messages,
     redis_ok,
     save_display_messages,
     save_messages,
+    set_parent,
 )
 from agent.session_context import SessionContextMiddleware, session_log_patcher
 from agent.types import (
+    AskRequest,
     ChatRequest,
     DisplayMessage,
     ErrorResponse,
     HealthCheck,
     ReadyCheck,
+    is_text_block,
     is_text_content,
+    is_tool_use_block,
 )
-
-if TYPE_CHECKING:
-    from anthropic.types import ToolUseBlock
-    from anthropic.types.tool_param import ToolParam
-    from anthropic.types.tool_result_block_param import ToolResultBlockParam
-
 
 MCPSession = Annotated[Client[Any], Depends(mcp_session)]
 ToolsReady = Annotated[bool, Depends(tools_ready)]
@@ -73,6 +74,74 @@ app.add_middleware(
 )
 
 logger.configure(patcher=session_log_patcher)
+
+
+async def _agentic_loop(
+    client: anthropic.AsyncAnthropic,
+    messages: list[Any],
+    anthropic_tools: list[ToolParam],
+    session: Client[Any],
+    *,
+    max_tokens: int = 4096,
+    emit_thinking: bool = False,
+) -> AsyncGenerator[str]:
+    """Shared agentic loop: call Claude, execute tools, yield text."""
+    while True:
+        response = await client.messages.create(
+            model=MODEL,
+            max_tokens=max_tokens,
+            messages=messages,
+            tools=anthropic_tools if anthropic_tools else anthropic.omit,
+            temperature=0.0,
+            top_k=1,
+        )
+
+        tool_uses = [b for b in response.content if is_tool_use_block(b)]
+        text_blocks = [b.text for b in response.content if is_text_block(b)]
+
+        if not tool_uses:
+            for text in text_blocks:
+                yield text
+            return
+
+        messages.append(
+            {
+                "role": "assistant",
+                "content": [block.model_dump() for block in response.content],
+            }
+        )
+
+        thinking_parts = [t for t in text_blocks if t.strip()] if emit_thinking else []
+        chart_markers: list[str] = []
+        tool_results: list[dict[str, str]] = []
+        for tool_use in tool_uses:
+            logger.info("Calling tool", extra={"tool": tool_use.name})
+            result = await session.call_tool(tool_use.name, tool_use.input)
+            tool_result_content = ""
+            for content in result.content:
+                if is_text_content(content):
+                    tool_result_content += content.text
+            if emit_thinking:
+                thinking_parts.append(
+                    f"Called **{tool_use.name}**: `{tool_result_content[:200]}`"
+                )
+                if tool_use.name == "plot_medians":
+                    chart_markers.append(f"<!--CHART:{tool_result_content}-->")
+            tool_results.append(
+                {
+                    "type": "tool_result",
+                    "tool_use_id": tool_use.id,
+                    "content": tool_result_content,
+                }
+            )
+
+        if emit_thinking and thinking_parts:
+            thinking = "\n\n".join(thinking_parts)
+            yield f"<!--THINKING:{thinking}-->"
+            for marker in chart_markers:
+                yield marker
+
+        messages.append({"role": "user", "content": tool_results})
 
 
 def _error_response(status_code: int, error: str) -> JSONResponse:
@@ -157,80 +226,106 @@ async def chat(request: ChatRequest, session: MCPSession, tools: ToolsReady):
         display.append(DisplayMessage(role="user", content=request.message))
 
         full_response = ""
+        async for chunk in _agentic_loop(
+            app.state.anthropic_client,
+            messages,
+            anthropic_tools,
+            session,
+            max_tokens=4096,
+            emit_thinking=True,
+        ):
+            full_response += chunk
+            yield chunk
 
-        while True:
-            response = await app.state.anthropic_client.messages.create(
-                model=MODEL,
-                max_tokens=4096,
-                messages=messages,
-                tools=anthropic_tools if anthropic_tools else anthropic.omit,
-                temperature=0.0,
-                top_k=1,
-            )
-
-            # Collect text and tool uses from the response
-            tool_uses: list[ToolUseBlock] = []
-            text_blocks: list[str] = []
-            for block in response.content:
-                if block.type == "text":
-                    text_blocks.append(block.text)
-                elif block.type == "tool_use":
-                    tool_uses.append(block)
-
-            # If no tool calls, this is the final answer
-            if not tool_uses:
-                for text in text_blocks:
-                    full_response += text
-                    yield text
-                break
-
-            # Add assistant message with full content (text + tool_use blocks)
-            messages.append(
-                {
-                    "role": "assistant",
-                    "content": [block.model_dump() for block in response.content],
-                }
-            )
-
-            # Execute tool calls and build tool results
-            thinking_parts = [t for t in text_blocks if t.strip()]
-            chart_markers: list[str] = []
-            tool_results: list[ToolResultBlockParam] = []
-            for tool_use in tool_uses:
-                logger.info("Calling tool", extra={"tool": tool_use.name})
-                result = await session.call_tool(tool_use.name, tool_use.input)
-                tool_result_content = ""
-                for content in result.content:
-                    if is_text_content(content):
-                        tool_result_content += content.text
-                thinking_parts.append(
-                    f"Called **{tool_use.name}**: `{tool_result_content[:200]}`"
-                )
-                if tool_use.name == "plot_medians":
-                    chart_markers.append(f"<!--CHART:{tool_result_content}-->")
-                tool_results.append(
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": tool_use.id,
-                        "content": tool_result_content,
-                    }
-                )
-
-            # Emit thinking first, then charts outside the expander
-            thinking = "\n\n".join(thinking_parts)
-            full_response += f"<!--THINKING:{thinking}-->"
-            yield f"<!--THINKING:{thinking}-->"
-            for marker in chart_markers:
-                full_response += marker
-                yield marker
-
-            messages.append({"role": "user", "content": tool_results})
-
-        # Persist the full history and display messages
         messages.append({"role": "assistant", "content": full_response})
         display.append(DisplayMessage(role="assistant", content=full_response))
         await save_messages(session_id, messages)
         await save_display_messages(session_id, display)
         logger.info("Chat completed")
+
+    return StreamingResponse(generate(), media_type="text/plain")
+
+
+@app.get("/sessions/{session_id}/threads")
+async def get_threads(session_id: str) -> list[dict[str, Any]]:
+    """Return child threads (side-chats) for a session."""
+    return await list_children(session_id)
+
+
+@app.get("/sessions/{session_id}/threads/{thread_id}")
+async def get_thread(session_id: str, thread_id: str) -> list[DisplayMessage]:
+    """Return display messages for a specific thread."""
+    parent = await get_parent(thread_id)
+    if parent != session_id:
+        raise HTTPException(404, "Thread not found under this session")
+    return await load_display_messages(thread_id)
+
+
+@app.post("/ask")
+async def ask(request: AskRequest, session: MCPSession, tools: ToolsReady):
+    """Side-chat question persisted as a child thread of the parent session."""
+    if not tools:
+        raise ToolsNotReadyError()
+    anthropic_tools: list[ToolParam] = app.state.anthropic_tools
+
+    thread_id = request.thread_id
+    parent_id = request.session_id
+
+    existing_parent = await get_parent(thread_id)
+    if existing_parent is None:
+        await set_parent(
+            child_id=thread_id,
+            parent_id=parent_id,
+            meta={"context": request.context},
+        )
+
+    parent_messages = await load_messages(parent_id)
+    thread_messages = await load_messages(thread_id)
+    thread_display = await load_display_messages(thread_id)
+
+    if not thread_messages:
+        thread_messages.append(
+            {
+                "role": "user",
+                "content": (
+                    f"The user clicked on a chart bar and wants to ask about it.\n"
+                    f"Context: {request.context}\n\n"
+                    "Give concise, helpful answers. Do not use tool markers like "
+                    "<!--CHART:--> or <!--TABLE:-->."
+                ),
+            }
+        )
+        thread_messages.append(
+            {
+                "role": "assistant",
+                "content": "Sure, I can help you with that. What would you like to know?",
+            }
+        )
+
+    thread_messages.append({"role": "user", "content": request.question})
+    thread_display.append(DisplayMessage(role="user", content=request.question))
+
+    combined = parent_messages + thread_messages
+
+    async def generate() -> AsyncGenerator[str]:
+        full_response = ""
+        async for chunk in _agentic_loop(
+            app.state.anthropic_client,
+            combined,
+            anthropic_tools,
+            session,
+            max_tokens=1024,
+        ):
+            full_response += chunk
+            yield chunk
+
+        thread_messages.append({"role": "assistant", "content": full_response})
+        thread_display.append(DisplayMessage(role="assistant", content=full_response))
+        await save_messages(thread_id, thread_messages)
+        await save_display_messages(thread_id, thread_display)
+        logger.info(
+            "Thread message saved",
+            extra={"thread": thread_id, "parent": parent_id},
+        )
 
     return StreamingResponse(generate(), media_type="text/plain")

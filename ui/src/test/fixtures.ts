@@ -1,7 +1,7 @@
 /** Canned response data shared between mock-server.mjs and MSW test handlers. */
 
 export const CHART_DATA = {
-  genes: ["BRCA2","BRCA1","TP53","GATA3","CDH1","ESR1","MAP3K1","HER2","PIK3CA","AKT1"],
+  labels: ["BRCA2","BRCA1","TP53","GATA3","CDH1","ESR1","MAP3K1","HER2","PIK3CA","AKT1"],
   values: [0.112,0.158,0.373,0.602,0.834,0.716,0.701,0.42,0.762,0.278],
   title: "Gene median expression values",
   x_label: "Gene",

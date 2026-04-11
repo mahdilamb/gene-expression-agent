@@ -70,7 +70,7 @@ def test_plot_medians_returns_json():
     values = [0.5, 0.3]
     result = dataset.plot_medians(genes, values)
     parsed = json.loads(result)
-    assert parsed["genes"] == genes
+    assert parsed["labels"] == genes
     assert parsed["values"] == values
 
 

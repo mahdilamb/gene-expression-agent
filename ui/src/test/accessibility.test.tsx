@@ -101,7 +101,7 @@ describe("Table widget", () => {
 // ── Chart widget ─────────────────────────────────────────────────────────────
 
 const CHART_RAW = JSON.stringify({
-  genes: ["BRCA1", "TP53"],
+  labels: ["BRCA1", "TP53"],
   values: [0.158, 0.373],
   title: "Expression",
   x_label: "Gene",
