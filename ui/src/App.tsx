@@ -1,6 +1,7 @@
 import chatSvg from "./assets/chat.svg";
 import { ChatInput } from "./components/ChatInput";
 import { MessageList } from "./components/MessageList";
+import { SelectionAsk } from "./components/widgets/SelectionAsk";
 import { useChat } from "./hooks/useChat";
 import { useSession } from "./hooks/useSession";
 import { SessionIdContext } from "./hooks/useSessionId";
@@ -58,7 +59,9 @@ function AppInner() {
         {loading ? (
           <p className="loading">Loading session...</p>
         ) : (
-          <MessageList messages={messages} streaming={streaming} />
+          <SelectionAsk>
+            <MessageList messages={messages} streaming={streaming} />
+          </SelectionAsk>
         )}
       </main>
 
