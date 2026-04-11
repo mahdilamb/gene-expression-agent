@@ -313,33 +313,53 @@ body {
   cursor: default;
 }
 
-.thought-expander summary {
+.thought-summary {
+  all: unset;
   cursor: pointer;
   font-size: 0.75rem;
   font-weight: 400;
   color: var(--thought-summary-color);
-  list-style: none;
   user-select: none;
   line-height: 1.6;
+  display: flex;
+  align-items: center;
+  gap: 0.2em;
+  width: 100%;
 }
 
-.thought-expander summary::-webkit-details-marker {
-  display: none;
-}
-
-.thought-expander summary::before {
-  content: "▶ ";
+.thought-arrow {
+  display: inline-block;
   font-size: 0.85em;
+  transition: transform 0.2s ease;
 }
 
-.thought-expander[open] summary::before {
-  content: "▼ ";
+.thought-arrow::before {
+  content: "▶";
+}
+
+.thought-expander--open .thought-arrow {
+  transform: rotate(90deg);
+}
+
+.thought-content-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s ease;
+}
+
+.thought-expander--open .thought-content-wrapper {
+  grid-template-rows: 1fr;
+}
+
+.thought-content-wrapper > .thought-content {
+  min-height: 0;
+  overflow: hidden;
 }
 
 .thought-content {
   font-size: 0.78em;
   color: var(--thought-content-color);
-  padding: 0.2rem 0 0.15rem 1rem;
+  padding: 0 0 0 1rem;
   opacity: 0.8;
   word-break: break-word;
 }
