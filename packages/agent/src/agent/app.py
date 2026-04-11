@@ -279,7 +279,9 @@ async def ask(request: AskRequest, session: MCPSession, tools: ToolsReady):
             meta={"context": request.context},
         )
 
-    parent_messages = await load_messages(parent_id)
+    parent_messages = (
+        await load_messages(parent_id) if request.include_chat_context else []
+    )
     thread_messages = await load_messages(thread_id)
     thread_display = await load_display_messages(thread_id)
 
@@ -288,7 +290,7 @@ async def ask(request: AskRequest, session: MCPSession, tools: ToolsReady):
             {
                 "role": "user",
                 "content": (
-                    f"The user clicked on a chart bar and wants to ask about it.\n"
+                    f"The user wants to ask about something in the conversation.\n"
                     f"Context: {request.context}\n\n"
                     "Give concise, helpful answers. Do not use tool markers like "
                     "<!--CHART:--> or <!--TABLE:-->."

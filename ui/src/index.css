@@ -641,6 +641,25 @@ body {
   cursor: not-allowed;
 }
 
+.ask-popup-context-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ask-popup-context-toggle input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.ask-popup-context-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 /* ── Table ── */
 
 .table-wrapper {

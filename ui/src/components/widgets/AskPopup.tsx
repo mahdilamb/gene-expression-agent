@@ -25,6 +25,8 @@ export function AskPopup({ subject, context, sessionId, threadId, position, onCl
   const [input, setInput] = useState("");
   const [thread, setThread] = useState<ThreadMessage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [includeChatContext, setIncludeChatContext] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const threadEndRef = useRef<HTMLDivElement>(null);
@@ -36,6 +38,7 @@ export function AskPopup({ subject, context, sessionId, threadId, position, onCl
       .then((res) => (res.ok ? res.json() : []))
       .then((msgs: Array<{ role: string; content: string }>) => {
         setThread(msgs.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })));
+        if (msgs.length > 0) setHasInteracted(true);
       })
       .catch(() => {})
       .finally(() => {
@@ -80,7 +83,7 @@ export function AskPopup({ subject, context, sessionId, threadId, position, onCl
         const res = await fetch(`${BASE_URL}/ask`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session_id: sessionId, thread_id: threadId, question, context }),
+          body: JSON.stringify({ session_id: sessionId, thread_id: threadId, question, context, include_chat_context: includeChatContext }),
         });
 
         if (!res.ok || !res.body) {
@@ -109,8 +112,8 @@ export function AskPopup({ subject, context, sessionId, threadId, position, onCl
           });
         }
 
-        // Register this thread so indicators appear immediately
         registerThread(threadId);
+        setHasInteracted(true);
       } catch (err) {
         setThread((prev) => [
           ...prev,
@@ -120,7 +123,7 @@ export function AskPopup({ subject, context, sessionId, threadId, position, onCl
         setLoading(false);
       }
     },
-    [context, sessionId, threadId, loading, registerThread],
+    [context, sessionId, threadId, loading, includeChatContext, registerThread],
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -138,6 +141,16 @@ export function AskPopup({ subject, context, sessionId, threadId, position, onCl
     >
       <div className="ask-popup-header">
         <span className="ask-popup-title">Ask about <strong>{subject}</strong></span>
+        {!hasInteracted && (
+          <label className="ask-popup-context-toggle" title="Include main chat history as context">
+            <input
+              type="checkbox"
+              checked={includeChatContext}
+              onChange={(e) => setIncludeChatContext(e.target.checked)}
+            />
+            <span className="ask-popup-context-label">Chat context</span>
+          </label>
+        )}
         <button className="ask-popup-close" onClick={onClose} aria-label="Close">
           &times;
         </button>

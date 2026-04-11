@@ -46,6 +46,7 @@ class AskRequest(BaseModel):
     thread_id: str
     question: str
     context: str
+    include_chat_context: bool = False
 
 
 class ErrorResponse(BaseModel):
