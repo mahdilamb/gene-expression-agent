@@ -1,9 +1,35 @@
-import { marked } from "marked";
+import { marked, type Tokens } from "marked";
 
 import { useShowThoughts } from "../hooks/useShowThoughts";
 import { Chart } from "./widgets/Chart";
 import { Table } from "./widgets/Table";
 import { ThoughtGroup } from "./widgets/ThoughtGroup";
+
+/**
+ * Custom marked renderer that converts markdown tables into <!--MD_TABLE:json-->
+ * placeholders so they can be rendered as interactive Table widgets.
+ */
+const renderer = new marked.Renderer();
+renderer.table = (token: Tokens.Table): string => {
+  const headers = token.header.map((h) => h.text);
+  const rows = token.rows.map((row) =>
+    Object.fromEntries(row.map((cell, i) => {
+      // Render inline markdown (bold, italic, code, etc.) to HTML
+      const html = marked.parseInline(cell.text) as string;
+      // If rendering produced HTML tags, keep as string; otherwise coerce numbers
+      if (html !== cell.text) {
+        return [headers[i]!, html];
+      }
+      const n = Number(cell.text);
+      return [headers[i]!, cell.text !== "" && !isNaN(n) ? n : cell.text];
+    })),
+  );
+  const json = JSON.stringify(rows);
+  // Use a base64-encoded data attribute so the JSON doesn't interfere with HTML parsing
+  const encoded = btoa(unescape(encodeURIComponent(json)));
+  return `<div data-md-table="${encoded}"></div>`;
+};
+marked.use({ renderer });
 
 const WIDGET_TYPES = ["CHART", "THINKING", "TABLE"] as const;
 type WidgetType = (typeof WIDGET_TYPES)[number];
@@ -74,14 +100,38 @@ export function MessageContent({ content }: { content: string }) {
           case "TABLE":
             return <Table key={i} raw={item.value} />;
           case "text":
-            return (
-              <div
-                key={i}
-                className="markdown-body"
-                dangerouslySetInnerHTML={{ __html: marked.parse(item.value) as string }}
-              />
-            );
+            return <MarkdownWithTables key={i} markdown={item.value} />;
         }
+      })}
+    </>
+  );
+}
+
+const MD_TABLE_RE = /(<div data-md-table="[^"]*"><\/div>)/g;
+
+/** Renders markdown, replacing any markdown tables with interactive Table widgets. */
+function MarkdownWithTables({ markdown }: { markdown: string }) {
+  const html = marked.parse(markdown) as string;
+
+  if (!MD_TABLE_RE.test(html)) {
+    return <div className="markdown-body" dangerouslySetInnerHTML={{ __html: html }} />;
+  }
+
+  MD_TABLE_RE.lastIndex = 0;
+  const segments = html.split(MD_TABLE_RE);
+
+  return (
+    <>
+      {segments.map((segment, i) => {
+        const attrMatch = segment.match(/^<div data-md-table="([^"]*)">/);
+        if (attrMatch) {
+          const json = decodeURIComponent(escape(atob(attrMatch[1]!)));
+          return <Table key={i} raw={json} />;
+        }
+        if (segment.trim()) {
+          return <div key={i} className="markdown-body" dangerouslySetInnerHTML={{ __html: segment }} />;
+        }
+        return null;
       })}
     </>
   );
