@@ -3,8 +3,11 @@ import { ChatInput } from "./components/ChatInput";
 import { MessageList } from "./components/MessageList";
 import { useChat } from "./hooks/useChat";
 import { useSession } from "./hooks/useSession";
+import { SessionIdContext } from "./hooks/useSessionId";
 import { ThemeContext, useTheme, useThemeProvider } from "./hooks/useTheme";
 import { ShowThoughtsContext, useShowThoughts, useShowThoughtsProvider } from "./hooks/useShowThoughts";
+import { ShowThreadsContext, useShowThreads, useShowThreadsProvider } from "./hooks/useShowThreads";
+import { ThreadsContext, useThreadsProvider } from "./hooks/useThreads";
 
 function AppInner() {
   const { sessionId, messages, loading, newSession, addMessage, updateLastAssistant } =
@@ -12,12 +15,24 @@ function AppInner() {
   const { send, streaming } = useChat({ sessionId, addMessage, updateLastAssistant });
   const { theme, toggle } = useTheme();
   const { showThoughts, toggleThoughts } = useShowThoughts();
+  const { showThreads, toggleThreads } = useShowThreads();
+  const threadsValue = useThreadsProvider(sessionId);
 
   return (
+    <SessionIdContext.Provider value={sessionId}>
+    <ThreadsContext.Provider value={threadsValue}>
     <div className="app">
       <header className="owkin-header">
         <h1 className="brand">OWKIN <span className="sep">|</span> <img src={chatSvg} alt="chat" /></h1>
         <div className="header-actions">
+          <button
+            className="theme-toggle-btn"
+            onClick={toggleThreads}
+            aria-label={showThreads ? "Hide thread indicators" : "Show thread indicators"}
+            title={showThreads ? "Hide thread indicators" : "Show thread indicators"}
+          >
+            {showThreads ? "💬" : "🗨️"}
+          </button>
           <button
             className="theme-toggle-btn"
             onClick={toggleThoughts}
@@ -51,16 +66,21 @@ function AppInner() {
         <ChatInput onSend={send} disabled={streaming || loading} />
       </footer>
     </div>
+    </ThreadsContext.Provider>
+    </SessionIdContext.Provider>
   );
 }
 
 export default function App() {
   const themeValue = useThemeProvider();
   const thoughtsValue = useShowThoughtsProvider();
+  const showThreadsValue = useShowThreadsProvider();
   return (
     <ThemeContext.Provider value={themeValue}>
       <ShowThoughtsContext.Provider value={thoughtsValue}>
-        <AppInner />
+        <ShowThreadsContext.Provider value={showThreadsValue}>
+          <AppInner />
+        </ShowThreadsContext.Provider>
       </ShowThoughtsContext.Provider>
     </ThemeContext.Provider>
   );
