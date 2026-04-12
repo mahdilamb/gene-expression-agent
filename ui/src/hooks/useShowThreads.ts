@@ -1,4 +1,6 @@
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
+
+const STORAGE_KEY = "owkin-show-threads";
 
 interface ShowThreadsContextValue {
   showThreads: boolean;
@@ -11,7 +13,15 @@ export const ShowThreadsContext = createContext<ShowThreadsContextValue>({
 });
 
 export function useShowThreadsProvider() {
-  const [showThreads, setShowThreads] = useState(true);
+  const [showThreads, setShowThreads] = useState(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored === null ? true : stored === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, String(showThreads));
+  }, [showThreads]);
+
   const toggleThreads = useCallback(() => setShowThreads((v) => !v), []);
   return { showThreads, toggleThreads };
 }
