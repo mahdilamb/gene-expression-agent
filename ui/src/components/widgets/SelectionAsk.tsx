@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useSessionId } from "../../hooks/useSessionId";
+import { useShowThreads } from "../../hooks/useShowThreads";
+import { useThreads } from "../../hooks/useThreads";
 import { AskPopup } from "./AskPopup";
 
 interface SelectionState {
@@ -12,13 +14,118 @@ interface SelectionState {
 
 /**
  * Wraps children and shows an "Ask about" popup when the user selects text.
- * The popup appears near the selection; clicking it opens a threaded side-chat.
+ * On hover, underlines text that has existing selection-based threads.
  */
 export function SelectionAsk({ children }: { children: React.ReactNode }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sessionId = useSessionId();
+  const { threadMeta } = useThreads();
+  const { showThreads } = useShowThreads();
   const [selection, setSelection] = useState<SelectionState | null>(null);
   const [popup, setPopup] = useState<SelectionState | null>(null);
+  const [hovered, setHovered] = useState(false);
+
+  // Map highlight text -> thread metadata for selection-based threads
+  const highlightMap = useMemo(() => {
+    if (!showThreads) return new Map<string, { threadId: string; text: string }>();
+    const map = new Map<string, { threadId: string; text: string }>();
+    for (const meta of threadMeta.values()) {
+      if (meta.highlight_text) {
+        map.set(meta.highlight_text, { threadId: meta.thread_id, text: meta.highlight_text });
+      }
+    }
+    return map;
+  }, [threadMeta, showThreads]);
+
+  const highlightTexts = useMemo(() => Array.from(highlightMap.keys()), [highlightMap]);
+
+  // Apply/remove underline marks on hover
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || highlightTexts.length === 0) return;
+
+    if (!hovered && !popup) {
+      // Remove all marks when not hovered and no popup open
+      el.querySelectorAll("mark.thread-highlight").forEach((mark) => {
+        const parent = mark.parentNode!;
+        parent.replaceChild(document.createTextNode(mark.textContent ?? ""), mark);
+        parent.normalize();
+      });
+      return;
+    }
+
+    // Update active state on existing marks
+    el.querySelectorAll("mark.thread-highlight").forEach((mark) => {
+      const isActive = popup && mark.textContent === popup.text;
+      mark.classList.toggle("thread-highlight--active", !!isActive);
+    });
+
+    // Walk text nodes and wrap matches
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const textNodes: Text[] = [];
+    while (walker.nextNode()) {
+      const node = walker.currentNode as Text;
+      // Skip nodes inside popups or already-marked nodes
+      if (node.parentElement?.closest(".ask-popup, mark.thread-highlight")) continue;
+      textNodes.push(node);
+    }
+
+    for (const node of textNodes) {
+      let text = node.textContent ?? "";
+      const fragments: Array<string | { highlight: string }> = [];
+      let modified = false;
+
+      for (const highlight of highlightTexts) {
+        const parts: typeof fragments = [];
+        for (const frag of fragments.length ? fragments : [text]) {
+          if (typeof frag !== "string") {
+            parts.push(frag);
+            continue;
+          }
+          let remaining = frag;
+          let idx: number;
+          while ((idx = remaining.indexOf(highlight)) !== -1) {
+            if (idx > 0) parts.push(remaining.slice(0, idx));
+            parts.push({ highlight });
+            remaining = remaining.slice(idx + highlight.length);
+            modified = true;
+          }
+          if (remaining) parts.push(remaining);
+        }
+        fragments.length = 0;
+        fragments.push(...parts);
+      }
+
+      if (!modified) continue;
+
+      const parent = node.parentNode!;
+      for (const frag of fragments) {
+        if (typeof frag === "string") {
+          parent.insertBefore(document.createTextNode(frag), node);
+        } else {
+          const mark = document.createElement("mark");
+          mark.className = "thread-highlight";
+          mark.textContent = frag.highlight;
+          const entry = highlightMap.get(frag.highlight);
+          if (entry) {
+            mark.addEventListener("click", (e) => {
+              e.stopPropagation();
+              const containerRect = containerRef.current!.getBoundingClientRect();
+              const markRect = mark.getBoundingClientRect();
+              setPopup({
+                text: entry.text,
+                threadId: entry.threadId,
+                x: markRect.left - containerRect.left + markRect.width / 2,
+                y: markRect.top - containerRect.top - 4,
+              });
+            });
+          }
+          parent.insertBefore(mark, node);
+        }
+      }
+      parent.removeChild(node);
+    }
+  }, [hovered, highlightTexts, popup, highlightMap]);
 
   const handleMouseUp = useCallback(() => {
     const sel = window.getSelection();
@@ -111,6 +218,7 @@ export function SelectionAsk({ children }: { children: React.ReactNode }) {
         <AskPopup
           subject={popup.text.length > 40 ? popup.text.slice(0, 40) + "..." : popup.text}
           context={`The user highlighted this text: "${popup.text}"`}
+          highlightText={popup.text}
           sessionId={sessionId}
           threadId={popup.threadId}
           position={{ x: popup.x, y: popup.y }}

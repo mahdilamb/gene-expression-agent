@@ -273,10 +273,13 @@ async def ask(request: AskRequest, session: MCPSession, tools: ToolsReady):
 
     existing_parent = await get_parent(thread_id)
     if existing_parent is None:
+        meta: dict[str, str] = {"context": request.context}
+        if request.highlight_text:
+            meta["highlight_text"] = request.highlight_text
         await set_parent(
             child_id=thread_id,
             parent_id=parent_id,
-            meta={"context": request.context},
+            meta=meta,
         )
 
     parent_messages = (

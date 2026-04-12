@@ -470,6 +470,23 @@ body {
   background: var(--accent-hover);
 }
 
+mark.thread-highlight {
+  background: none;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background 0.15s, text-decoration-color 0.15s;
+}
+
+mark.thread-highlight--active {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  text-decoration-color: transparent;
+}
+
 /* ── Thread indicators ── */
 
 /* Indicators hidden by default, shown on parent hover */

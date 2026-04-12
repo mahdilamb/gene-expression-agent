@@ -19,9 +19,11 @@ export interface AskPopupProps {
   threadId: string;
   position: { x: number; y: number };
   onClose: () => void;
+  /** Original highlighted text, stored as thread metadata for underline indicators. */
+  highlightText?: string;
 }
 
-export function AskPopup({ subject, context, sessionId, threadId, position, onClose }: AskPopupProps) {
+export function AskPopup({ subject, context, sessionId, threadId, position, onClose, highlightText }: AskPopupProps) {
   const [input, setInput] = useState("");
   const [thread, setThread] = useState<ThreadMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -83,7 +85,7 @@ export function AskPopup({ subject, context, sessionId, threadId, position, onCl
         const res = await fetch(`${BASE_URL}/ask`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session_id: sessionId, thread_id: threadId, question, context, include_chat_context: includeChatContext }),
+          body: JSON.stringify({ session_id: sessionId, thread_id: threadId, question, context, include_chat_context: includeChatContext, highlight_text: highlightText ?? null }),
         });
 
         if (!res.ok || !res.body) {
