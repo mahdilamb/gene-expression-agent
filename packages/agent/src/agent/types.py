@@ -4,7 +4,8 @@ import uuid
 from typing import TYPE_CHECKING, Literal, NotRequired, TypedDict, TypeGuard
 
 from mcp.types import TextContent
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
+from redis_queen import redis_queen
 
 if TYPE_CHECKING:
     from anthropic.types import (
@@ -34,6 +35,31 @@ class DisplayMessage(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     role: str
     content: str
+
+
+@redis_queen(key="agent:session:{session_id}:display")
+class DisplayMessages(RootModel[list[DisplayMessage]]):
+    """Display messages for the frontend, stored as a JSON array."""
+
+
+class SessionMessage(BaseModel):
+    """A single message in a conversation."""
+
+    role: str
+    content: str | list[dict]
+
+
+@redis_queen(key="agent:session:{session_id}")
+class SessionMessages(RootModel[list[SessionMessage]]):
+    """Conversation message history, stored as a JSON array."""
+
+
+@redis_queen(key="agent:session:{session_id}:meta")
+class SessionMeta(BaseModel):
+    """Metadata for a child session."""
+
+    context: str = ""
+    highlight_text: str | None = None
 
 
 class ChatRequest(BaseModel):
