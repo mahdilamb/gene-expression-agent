@@ -166,7 +166,6 @@ export function Table({ raw }: { raw: string }) {
                       aria-label={`Filter ${col}`}
                       className="table-filter-popover"
                       ref={popoverRef}
-                      onClick={(e) => e.stopPropagation()}
                     >
                       <input
                         className="table-filter-input"
@@ -174,15 +173,17 @@ export function Table({ raw }: { raw: string }) {
                         placeholder={`Filter ${col}…`}
                         value={filterInputs[col] ?? ""}
                         onChange={(e) => setFilterInputs((prev) => ({ ...prev, [col]: e.target.value }))}
+                        onClick={(e) => e.stopPropagation()}
                         onBlur={() => closeFilter(col)}
                         onKeyDown={(e) => {
+                          e.stopPropagation();
                           if (e.key === "Enter" || e.key === "Escape") {
                             if (e.key === "Escape") handleClear(col);
                             else closeFilter(col);
                             e.preventDefault();
                           }
                         }}
-                        autoFocus
+                        ref={(el) => { if (el) el.focus(); }}
                         aria-label={`Filter ${col} value`}
                       />
                     </div>

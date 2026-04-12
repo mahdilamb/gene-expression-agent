@@ -26,7 +26,7 @@ MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
 
 async def _ask(question: str) -> str:
     """Send a question through Claude with MCP tools, return final text."""
-    client = anthropic.Anthropic()
+    client = anthropic.AsyncAnthropic()
 
     async with Client(mcp) as mcp_client:
         mcp_tools = await mcp_client.list_tools()
@@ -42,7 +42,7 @@ async def _ask(question: str) -> str:
         messages: list[dict[str, Any]] = [{"role": "user", "content": question}]
 
         while True:
-            response = client.messages.create(
+            response = await client.messages.create(
                 model=MODEL,
                 max_tokens=4096,
                 messages=messages,  # ty: ignore[invalid-argument-type]

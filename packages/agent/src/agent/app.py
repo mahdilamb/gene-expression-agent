@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Annotated, Any
 
 import anthropic
+from anthropic import DefaultAioHttpClient
 from fastapi import Depends, FastAPI, Request, Response
 from fastapi.exceptions import HTTPException, RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -46,7 +47,11 @@ RedisReady = Annotated[bool, Depends(redis_ok)]
 async def lifespan(app: FastAPI):
     app.state.anthropic_tools = await fetch_tools()
     task = asyncio.create_task(poll_tools(app))
-    yield
+    async with anthropic.AsyncAnthropic(
+        http_client=DefaultAioHttpClient(),
+    ) as anthropic_client:
+        app.state.anthropic_client = anthropic_client
+        yield
     task.cancel()
 
 
@@ -68,8 +73,6 @@ app.add_middleware(
 )
 
 logger.configure(patcher=session_log_patcher)
-
-client = anthropic.Anthropic()
 
 
 def _error_response(status_code: int, error: str) -> JSONResponse:
@@ -147,6 +150,7 @@ async def chat(request: ChatRequest, session: MCPSession, tools: ToolsReady):
 
     async def generate() -> AsyncGenerator[str]:
         logger.info("Chat started")
+        client: anthropic.AsyncAnthropic = app.state.anthropic_client
         messages = await load_messages(session_id)
         display = await load_display_messages(session_id)
 
@@ -156,27 +160,32 @@ async def chat(request: ChatRequest, session: MCPSession, tools: ToolsReady):
         full_response = ""
 
         while True:
-            response = client.messages.create(
+            async with client.messages.stream(
                 model=MODEL,
                 max_tokens=4096,
                 messages=messages,
                 tools=anthropic_tools if anthropic_tools else anthropic.omit,
-            )
+                temperature=0.0,
+                top_k=1,
+            ) as stream:
+                # Stream text deltas to the client as they arrive
+                async for text in stream.text_stream:
+                    full_response += text
+                    yield text
 
-            # Collect text and tool uses from the response
+                response = await stream.get_final_message()
+
+            # Collect tool uses from the final message
             tool_uses: list[ToolUseBlock] = []
             text_blocks: list[str] = []
             for block in response.content:
                 if block.type == "text":
-                    text_blocks.append(block.text)  # ty: ignore[unresolved-attribute]
+                    text_blocks.append(block.text)
                 elif block.type == "tool_use":
-                    tool_uses.append(block)  # ty: ignore[invalid-argument-type]
+                    tool_uses.append(block)
 
             # If no tool calls, this is the final answer
             if not tool_uses:
-                for text in text_blocks:
-                    full_response += text
-                    yield text
                 break
 
             # Add assistant message with full content (text + tool_use blocks)
