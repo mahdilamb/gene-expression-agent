@@ -106,6 +106,22 @@ jobs:
       - working-directory: ui
         run: yarn typecheck
 
+  ui-lint:
+    needs: changes
+    if: needs.changes.outputs.ui == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: ui/yarn.lock
+      - working-directory: ui
+        run: yarn install --frozen-lockfile
+      - working-directory: ui
+        run: yarn lint
+
   ui-test:
     needs: changes
     if: needs.changes.outputs.ui == 'true'
