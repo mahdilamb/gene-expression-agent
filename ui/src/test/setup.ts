@@ -28,3 +28,16 @@ server.listen({ onUnhandledRequest: "warn" });
 
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
+
+// Plotly.js fires async redraws that fail after jsdom tears down the DOM.
+// Suppress the resulting unhandled-rejection so it doesn't fail the test run.
+declare const process: { on(event: string, listener: (reason: unknown) => void): void };
+process.on("unhandledRejection", (reason: unknown) => {
+  if (
+    reason instanceof TypeError &&
+    reason.message.includes("_redrawFromAutoMarginCount")
+  ) {
+    return; // harmless Plotly teardown error — swallow
+  }
+  throw reason; // re-throw anything else so real bugs surface
+});
