@@ -46,6 +46,13 @@ RedisReady = Annotated[bool, Depends(redis_ok)]
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from redis_queen import auto_migrate_up
+
+    from agent.session import REDIS_CLIENT
+
+    await auto_migrate_up(REDIS_CLIENT)
+    logger.info("Redis migrations applied")
+
     app.state.anthropic_tools = await fetch_tools()
     task = asyncio.create_task(poll_tools(app))
     async with anthropic.AsyncAnthropic(

@@ -29,8 +29,10 @@ members = ["packages/*"]
 [tool.uv.sources]
 agent = { workspace = true }
 
+
 [tool.ruff]
 target-version = "py313"
+extend-exclude = ["**/migrations"]
 
 [tool.ruff.lint]
 select = [
