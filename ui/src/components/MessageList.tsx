@@ -73,25 +73,27 @@ function StreamingContent({ content }: { content: string }) {
 
   return (
     <>
-      {showThoughts && (completedThoughts.length > 0 || inProgress) && (
-        <div className="thought-group">
-          {completedThoughts.length > 0 && (
-            <ThoughtGroup thoughts={completedThoughts} />
-          )}
-          {inProgress && (
-            <details
-              className={`thought-expander thought-expander--skeleton thought-expander--${completedThoughts.length === 0 ? "solo" : "last"}`}
-            >
-              <summary>
-                Thought
-                <span className="thinking-dots" style={{ marginLeft: "0.4em" }}>
-                  <span className="thinking-dot" />
-                  <span className="thinking-dot" />
-                  <span className="thinking-dot" />
-                </span>
-              </summary>
-            </details>
-          )}
+      {(completedThoughts.length > 0 || inProgress) && (
+        <div className={`thought-group-wrapper${showThoughts ? " thought-group-wrapper--visible" : ""}`}>
+          <div className="thought-group">
+            {completedThoughts.length > 0 && (
+              <ThoughtGroup thoughts={completedThoughts} />
+            )}
+            {inProgress && (
+              <details
+                className={`thought-expander thought-expander--skeleton thought-expander--${completedThoughts.length === 0 ? "solo" : "last"}`}
+              >
+                <summary>
+                  Thought
+                  <span className="thinking-dots" style={{ marginLeft: "0.4em" }}>
+                    <span className="thinking-dot" />
+                    <span className="thinking-dot" />
+                    <span className="thinking-dot" />
+                  </span>
+                </summary>
+              </details>
+            )}
+          </div>
         </div>
       )}
       {display ? (
