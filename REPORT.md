@@ -48,6 +48,8 @@ Storing conversation history in Redis rather than in-process memory means sessio
 
 ## AI-assisted coding — pros and cons
 
+Having reflected on this more, I think the main pro and the main cons cancel out. Using coding agents speeds up development but also adds additional code and enables scope-creep. I ended up doing the frontend with React (in part, because I know the framework quite well and had a few ideas about UI/UX I wanted to implement), but it's so unnecessary for a backend tech-test. I even had time to create a utility package for redis-schema migration and started working on a new UI feature (I thought it would be cool to be able to ask charts in-context - i.e. clicking on bars in a graph would allow you to ask more specific questions - the hope was that you could branch this out into scatter charts with a lasso selection and allow the user to ask questions directly on the data). But these were fun for me, but certainly not needed.
+
 ### Pros
 
 - **Scaffolding speed**: FastAPI endpoints, (the original) Streamlit layout, Docker Compose, CI, README files — the boilerplate I'd normally spend time looking up was handled quickly and largely correctly.
@@ -65,3 +67,4 @@ Storing conversation history in Redis rather than in-process memory means sessio
 - **Hallucinated APIs**: It would sometimes use SDK methods that don't actually exist, which meant verifying anything non-trivial against the real docs.
 - **New dependencies**: Often suggestions are based on older packages (e.g. suggesting using pip instead of uv for an obviously uv-managed repo).
 - **Too literal**: Sometimes the asks are taken too literally. When creating the React version of the UI it had hard-coded table headers. Careful reviewing of code is always important!
+- **Scope creep**: Because it's quite easy to get things moving, it's quite easy to add _nice to haves_, but in reality this adds additional IC time, debug time, review time, etc. It's definitely better to scope things correctly and focus on deliver within those remits; reviewing with stakeholders as necessary!
