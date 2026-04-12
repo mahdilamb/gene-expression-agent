@@ -1,0 +1,51 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+        exclude: ^.*/migrations/
+
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+        exclude: ^.*/migrations/
+
+      - id: ty-main
+        name: ty check src/
+        entry: uv run ty check src/
+        language: system
+        pass_filenames: false
+        files: ^src/
+
+      - id: ty-agent
+        name: ty check packages/agent/
+        entry: uv run ty check packages/agent/
+        language: system
+        pass_filenames: false
+        files: ^packages/agent/
+
+      - id: ui-typecheck
+        name: ui typecheck
+        entry: bash -c 'cd ui && yarn typecheck'
+        language: system
+        pass_filenames: false
+        files: ^ui/
+
+      - id: ui-lint
+        name: ui lint
+        entry: bash -c 'cd ui && yarn lint'
+        language: system
+        pass_filenames: false
+        files: ^ui/
+
+      - id: ui-test
+        name: ui test
+        entry: bash -c 'cd ui && yarn test'
+        language: system
+        pass_filenames: false
+        files: ^ui/
