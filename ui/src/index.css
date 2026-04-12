@@ -278,6 +278,21 @@ body {
 
 /* ── Thought expander ── */
 
+.thought-group-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s ease;
+}
+
+.thought-group-wrapper--visible {
+  grid-template-rows: 1fr;
+}
+
+.thought-group-wrapper > .thought-group {
+  min-height: 0;
+  overflow: hidden;
+}
+
 .thought-group {
   margin: 0.4rem 0;
 }

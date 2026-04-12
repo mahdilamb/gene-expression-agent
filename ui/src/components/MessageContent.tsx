@@ -91,8 +91,11 @@ export function MessageContent({ content }: { content: string }) {
     <>
       {groups.map((item, i) => {
         if (Array.isArray(item)) {
-          if (!showThoughts) return null;
-          return <ThoughtGroup key={i} thoughts={item.map((t) => t.value)} />;
+          return (
+            <div key={i} className={`thought-group-wrapper${showThoughts ? " thought-group-wrapper--visible" : ""}`}>
+              <ThoughtGroup thoughts={item.map((t) => t.value)} />
+            </div>
+          );
         }
         switch (item.type) {
           case "CHART":
