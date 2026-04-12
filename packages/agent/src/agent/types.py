@@ -47,6 +47,7 @@ class AskRequest(BaseModel):
     question: str
     context: str
     include_chat_context: bool = False
+    highlight_text: str | None = None
 
 
 class ErrorResponse(BaseModel):
