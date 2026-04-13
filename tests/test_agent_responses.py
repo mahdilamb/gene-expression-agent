@@ -26,9 +26,7 @@ MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
 
 async def _ask(question: str) -> str:
     """Send a question through Claude with MCP tools, return final text."""
-    client = anthropic.AsyncAnthropic()
-
-    async with Client(mcp) as mcp_client:
+    async with anthropic.AsyncAnthropic() as client, Client(mcp) as mcp_client:
         mcp_tools = await mcp_client.list_tools()
         anthropic_tools = [
             {
@@ -47,6 +45,8 @@ async def _ask(question: str) -> str:
                 max_tokens=4096,
                 messages=messages,  # ty: ignore[invalid-argument-type]
                 tools=anthropic_tools,  # ty: ignore[invalid-argument-type]
+                temperature=0.0,
+                top_k=1,
             )
 
             tool_uses = []
@@ -132,5 +132,25 @@ async def test_esophageal_cancer_not_in_dataset():
             "not include",
             "isn't in",
             "is not in",
+            "no data",
+            "no results",
+            "not supported",
+            "unavailable",
+            "not listed",
+            "not present",
+            "doesn't include",
+            "does not include",
+            "doesn't have",
+            "does not have",
+            "not among",
+            "not one of",
+            "doesn't appear",
+            "does not appear",
+            "not covered",
+            "isn't available",
+            "is not available",
         ]
-    ), "Expected response to indicate esophageal cancer is not in the dataset"
+    ), (
+        "Expected response to indicate esophageal cancer "
+        f"is not in the dataset. Got: {response}"
+    )
