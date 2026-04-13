@@ -150,7 +150,6 @@ async def chat(request: ChatRequest, session: MCPSession, tools: ToolsReady):
 
     async def generate() -> AsyncGenerator[str]:
         logger.info("Chat started")
-        client: anthropic.AsyncAnthropic = app.state.anthropic_client
         messages = await load_messages(session_id)
         display = await load_display_messages(session_id)
 
@@ -160,22 +159,16 @@ async def chat(request: ChatRequest, session: MCPSession, tools: ToolsReady):
         full_response = ""
 
         while True:
-            async with client.messages.stream(
+            response = await app.state.anthropic_client.messages.create(
                 model=MODEL,
                 max_tokens=4096,
                 messages=messages,
                 tools=anthropic_tools if anthropic_tools else anthropic.omit,
                 temperature=0.0,
                 top_k=1,
-            ) as stream:
-                # Stream text deltas to the client as they arrive
-                async for text in stream.text_stream:
-                    full_response += text
-                    yield text
+            )
 
-                response = await stream.get_final_message()
-
-            # Collect tool uses from the final message
+            # Collect text and tool uses from the response
             tool_uses: list[ToolUseBlock] = []
             text_blocks: list[str] = []
             for block in response.content:
@@ -186,6 +179,9 @@ async def chat(request: ChatRequest, session: MCPSession, tools: ToolsReady):
 
             # If no tool calls, this is the final answer
             if not tool_uses:
+                for text in text_blocks:
+                    full_response += text
+                    yield text
                 break
 
             # Add assistant message with full content (text + tool_use blocks)
