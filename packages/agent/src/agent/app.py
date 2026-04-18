@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from fastmcp import Client
 from loguru import logger
 
-from agent.constants import MODEL
+from agent.constants import CORS_ORIGINS, MODEL
 from agent.errors import ToolsNotReadyError
 from agent.mcp_tools import fetch_tools, mcp_session, poll_tools, tools_ready
 from agent.session import (
@@ -73,10 +73,13 @@ app = FastAPI(
 )
 
 app.add_middleware(SessionContextMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
+    allow_origins=CORS_ORIGINS,
+    allow_methods=sorted(
+        {method for route in app.routes for method in getattr(route, "methods", [])}
+    ),
     allow_headers=["*"],
 )
 
@@ -158,7 +161,7 @@ def _error_response(status_code: int, error: str) -> JSONResponse:
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(
-    _request: Request,
+    _: Request,
     exc: HTTPException,
 ) -> JSONResponse:
     return _error_response(exc.status_code, exc.detail)
@@ -166,7 +169,7 @@ async def http_exception_handler(
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(
-    _request: Request,
+    _: Request,
     exc: RequestValidationError,
 ) -> JSONResponse:
     return _error_response(422, str(exc))
@@ -174,7 +177,7 @@ async def validation_exception_handler(
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(
-    _request: Request,
+    _: Request,
     exc: Exception,
 ) -> JSONResponse:
     logger.exception("Unhandled exception")

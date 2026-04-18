@@ -24,7 +24,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.uv.workspace]
-members = ["packages/*"]
+members = ["packages/*", "santander-finder"]
 
 [tool.uv.sources]
 agent = { workspace = true }
