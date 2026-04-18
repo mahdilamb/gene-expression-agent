@@ -74,11 +74,12 @@ describe("Thought widget", () => {
   });
 
   it("toggles open on click", async () => {
-    render(<Thought content="Thinking..." />);
-    const details = document.querySelector("details")!;
-    expect(details.open).toBe(false);
-    await userEvent.click(screen.getByText("Thought"));
-    expect(details.open).toBe(true);
+    const onToggle = vi.fn();
+    render(<Thought content="Thinking..." onToggle={onToggle} />);
+    const btn = screen.getByRole("button", { name: /thought/i });
+    expect(btn).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(btn);
+    expect(onToggle).toHaveBeenCalledWith(true);
   });
 });
 
@@ -101,7 +102,7 @@ describe("Table widget", () => {
 // ── Chart widget ─────────────────────────────────────────────────────────────
 
 const CHART_RAW = JSON.stringify({
-  genes: ["BRCA1", "TP53"],
+  labels: ["BRCA1", "TP53"],
   values: [0.158, 0.373],
   title: "Expression",
   x_label: "Gene",

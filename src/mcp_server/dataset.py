@@ -27,12 +27,13 @@ def plot_medians(genes: list[str], values: list[float]) -> str:
     """Return chart data as JSON for the frontend to render."""
     return json.dumps(
         {
-            "genes": genes,
+            "labels": genes,
             "values": values,
             "title": "Gene median expression values",
             "x_label": "Gene",
             "y_label": "Median expression",
             "hover_template": "<b>%{x}</b><br>Median: %{y:.2f}<extra></extra>",
+            "ask_message": "Ask about gene expression data...",
         }
     )
 
